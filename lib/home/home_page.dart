@@ -16,6 +16,8 @@ import 'package:diplomka/events/events_page.dart';
 import 'package:diplomka/core/widgets/home_bottom_nav.dart';
 import 'package:diplomka/core/models/app_user.dart';
 import 'package:diplomka/core/services/user_profile_service.dart';
+import 'package:diplomka/core/services/profile_photo_service.dart';
+import 'package:diplomka/profile/widgets/profile_avatar.dart';
 import 'package:diplomka/core/navigation/home_shell.dart';
 
 class HomePage extends StatefulWidget {
@@ -31,6 +33,7 @@ class _HomePageState extends State<HomePage> {
   bool _showBackOnJobs = false;
   bool _showBackOnEvents = false;
   AppUser? _user;
+  String? _photoPath;
 
   static const _categories = ['All', 'Announcements', 'Events', 'Jobs'];
 
@@ -45,10 +48,16 @@ class _HomePageState extends State<HomePage> {
       openHomeTab: _returnToHomeFromList,
     );
     _loadUser();
+    ProfilePhotoService.instance.addListener(_onPhotoChanged);
+  }
+
+  void _onPhotoChanged() {
+    if (mounted) _loadPhoto();
   }
 
   @override
   void dispose() {
+    ProfilePhotoService.instance.removeListener(_onPhotoChanged);
     HomeShell.unbind(
       switchTab: _switchTab,
       resetHomeCategory: _resetCategoryFilter,
@@ -129,7 +138,14 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadUser() async {
     final user = await UserProfileService.instance.load();
-    if (mounted) setState(() => _user = user);
+    if (!mounted) return;
+    setState(() => _user = user);
+    await _loadPhoto();
+  }
+
+  Future<void> _loadPhoto() async {
+    final path = await ProfilePhotoService.instance.pathForUser(_user?.uid);
+    if (mounted) setState(() => _photoPath = path);
   }
 
   @override
@@ -367,25 +383,13 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ),
-        Container(
-          width: 45,
-          height: 45,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: HomeTheme.chipInactive,
-            border: Border.all(color: HomeTheme.accentSurface, width: 1),
-          ),
-          alignment: Alignment.center,
-          child: initials.isNotEmpty
-              ? Text(
-                  initials,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: HomeTheme.accent,
-                  ),
-                )
-              : const Icon(Icons.person, color: HomeTheme.accent, size: 28),
+        ProfileAvatar(
+          initials: initials.isNotEmpty ? initials : '?',
+          photoPath: _photoPath,
+          size: 45,
+          backgroundColor: HomeTheme.chipInactive,
+          initialsColor: HomeTheme.accent,
+          initialsFontSize: 16,
         ),
       ],
     );

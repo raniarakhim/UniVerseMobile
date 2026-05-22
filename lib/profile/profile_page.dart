@@ -13,6 +13,9 @@ import 'package:diplomka/core/services/saved_events_service.dart';
 import 'package:diplomka/core/services/saved_housing_service.dart';
 import 'package:diplomka/core/services/saved_items_registry.dart';
 import 'package:diplomka/core/services/saved_jobs_service.dart';
+import 'package:diplomka/core/services/profile_photo_service.dart';
+import 'package:diplomka/profile/profile_photo_picker.dart';
+import 'package:diplomka/profile/widgets/profile_avatar.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -23,8 +26,10 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   AppUser? _user;
+  String? _photoPath;
 
   final _savedEvents = SavedEventsService.instance;
+  final _profilePhoto = ProfilePhotoService.instance;
   final _savedJobs = SavedJobsService.instance;
   final _savedHousing = SavedHousingService.instance;
 
@@ -32,6 +37,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _loadUser();
+    _profilePhoto.addListener(_onPhotoChanged);
     for (final s in [_savedEvents, _savedJobs, _savedHousing]) {
       s.addListener(_onSavedChanged);
     }
@@ -39,10 +45,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   void dispose() {
+    _profilePhoto.removeListener(_onPhotoChanged);
     for (final s in [_savedEvents, _savedJobs, _savedHousing]) {
       s.removeListener(_onSavedChanged);
     }
     super.dispose();
+  }
+
+  void _onPhotoChanged() {
+    if (mounted) _refreshPhoto();
   }
 
   void _onSavedChanged() {
@@ -58,7 +69,32 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadUser() async {
     final user = await UserProfileService.instance.load();
-    if (mounted) setState(() => _user = user);
+    if (!mounted) return;
+    setState(() => _user = user);
+    await _refreshPhoto();
+  }
+
+  Future<void> _refreshPhoto() async {
+    final uid = _user?.uid;
+    final path = await _profilePhoto.pathForUser(uid);
+    if (mounted) setState(() => _photoPath = path);
+  }
+
+  Future<void> _changeProfilePhoto() async {
+    final uid = _user?.uid;
+    if (uid == null || uid.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Войдите в аккаунт, чтобы загрузить фото')),
+      );
+      return;
+    }
+    final path = await ProfilePhotoPicker.pickAndSave(
+      context,
+      uid,
+      hasPhoto: _photoPath != null,
+    );
+    if (!mounted) return;
+    setState(() => _photoPath = path);
   }
 
   Future<void> _openBasicInfo() async {
@@ -209,22 +245,12 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           Row(
             children: [
-              Container(
-                width: 65,
-                height: 65,
-                decoration: const BoxDecoration(
-                  color: HomeTheme.infoBox,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
+              ProfileAvatar(
+                initials: initials,
+                photoPath: _photoPath,
+                size: 65,
+                showEditBadge: true,
+                onTap: _changeProfilePhoto,
               ),
               const SizedBox(width: 12),
               Expanded(

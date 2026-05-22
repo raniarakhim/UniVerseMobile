@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:diplomka/core/home_theme.dart';
 import 'package:diplomka/core/models/app_user.dart';
 import 'package:diplomka/core/services/user_profile_service.dart';
+import 'package:diplomka/core/services/profile_photo_service.dart';
+import 'package:diplomka/profile/profile_photo_picker.dart';
+import 'package:diplomka/profile/widgets/profile_avatar.dart';
 import 'package:diplomka/core/widgets/home_detail_app_bar.dart';
 
 class BasicInfoPage extends StatefulWidget {
@@ -20,15 +23,23 @@ class _BasicInfoPageState extends State<BasicInfoPage> {
 
   int _yearIndex = 0;
   AppUser? _user;
+  String? _photoPath;
   bool _loading = true;
   bool _saving = false;
+
+  final _profilePhoto = ProfilePhotoService.instance;
 
   static const _years = ['1st', '2nd', '3rd', '4th', '5th', '6th+'];
 
   @override
   void initState() {
     super.initState();
+    _profilePhoto.addListener(_onPhotoChanged);
     _loadProfile();
+  }
+
+  void _onPhotoChanged() {
+    if (mounted) _refreshPhoto();
   }
 
   Future<void> _loadProfile() async {
@@ -47,6 +58,28 @@ class _BasicInfoPageState extends State<BasicInfoPage> {
       _user = user;
       _loading = false;
     });
+    await _refreshPhoto();
+  }
+
+  Future<void> _refreshPhoto() async {
+    final path = await _profilePhoto.pathForUser(_user?.uid);
+    if (mounted) setState(() => _photoPath = path);
+  }
+
+  Future<void> _changeProfilePhoto() async {
+    final uid = _user?.uid;
+    if (uid == null || uid.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Войдите в аккаунт, чтобы загрузить фото')),
+      );
+      return;
+    }
+    final path = await ProfilePhotoPicker.pickAndSave(
+      context,
+      uid,
+      hasPhoto: _photoPath != null,
+    );
+    if (mounted) setState(() => _photoPath = path);
   }
 
   Future<void> _save() async {
@@ -82,6 +115,7 @@ class _BasicInfoPageState extends State<BasicInfoPage> {
 
   @override
   void dispose() {
+    _profilePhoto.removeListener(_onPhotoChanged);
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
@@ -173,44 +207,18 @@ class _BasicInfoPageState extends State<BasicInfoPage> {
     final initials = _user?.initials ?? '?';
     return Column(
       children: [
-        SizedBox(
-          width: 100,
-          height: 100,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: const BoxDecoration(
-                  color: HomeTheme.primary,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  initials,
-                  style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 25,
-                  height: 25,
-                  decoration: const BoxDecoration(
-                    color: HomeTheme.accentSurface,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.edit_outlined, size: 16, color: HomeTheme.primary),
-                ),
-              ),
-            ],
-          ),
+        ProfileAvatar(
+          initials: initials,
+          photoPath: _photoPath,
+          size: 100,
+          backgroundColor: HomeTheme.primary,
+          initialsFontSize: 48,
+          showEditBadge: true,
+          onTap: _changeProfilePhoto,
         ),
         const SizedBox(height: 8),
         TextButton(
-          onPressed: () {},
+          onPressed: _changeProfilePhoto,
           child: const Text(
             'Change photo',
             style: TextStyle(
