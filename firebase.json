@@ -1,0 +1,59 @@
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css|wasm)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        "source": "index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "diplomkauniverse",
+          "appId": "1:367874596322:android:53cf6387ab419316892dbb",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase/firebase_options.dart": {
+          "projectId": "diplomkauniverse",
+          "configurations": {
+            "android": "1:367874596322:android:53cf6387ab419316892dbb",
+            "web": "1:367874596322:web:3c24c865ea87495f892dbb"
+          }
+        }
+      }
+    }
+  }
+}
