@@ -16,12 +16,12 @@ class SavedJobTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+    return IntrinsicHeight(
+      child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
           width: 4,
-          height: 87,
           decoration: BoxDecoration(
             color: item.accentBar,
             borderRadius: BorderRadius.circular(2),
@@ -51,26 +51,31 @@ class SavedJobTile extends StatelessWidget {
                     color: HomeTheme.accentSurface,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        item.month,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF7C3AED),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          item.month,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF7C3AED),
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${item.day}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: HomeTheme.primary,
+                        Text(
+                          '${item.day}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: HomeTheme.primary,
+                            height: 1.1,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -80,15 +85,20 @@ class SavedJobTile extends StatelessWidget {
                     children: [
                       Text(
                         item.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w500,
                           color: HomeTheme.primary,
+                          height: 1.2,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         item.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
@@ -110,7 +120,7 @@ class SavedJobTile extends StatelessWidget {
                   onPressed: onUnsave,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
-                  icon: const Icon(Icons.favorite, size: 16, color: HomeTheme.accent),
+                  icon: const Icon(Icons.favorite, size: 16, color: HomeTheme.primary),
                 ),
               ],
             ),
@@ -119,6 +129,7 @@ class SavedJobTile extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 

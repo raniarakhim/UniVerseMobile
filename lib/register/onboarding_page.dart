@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:diplomka/register/register_theme.dart';
 import 'package:diplomka/register/signup_page.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -9,6 +10,10 @@ class OnboardingPage extends StatefulWidget {
 }
 
 class _OnboardingPageState extends State<OnboardingPage> {
+  static const Color _titleColor = Color(0xFF1E1B4B);
+  static const Color _descriptionColor = Color(0xFF0F0E2A);
+  static const Color _accentColor = Color(0xFF1E1B4B);
+
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
@@ -58,7 +63,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       child: const Text(
                         'Skip >>',
                         style: TextStyle(
-                          color: Color(0xFF1E1B4B), // Dark blue
+                          color: _accentColor,
                           fontWeight: FontWeight.w500,
                           fontSize: 16,
                         ),
@@ -87,8 +92,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         // Image
                         Image.asset(
                           _items[index].image,
-                          width: 280,
-                          height: 280,
+                          width: double.infinity,
+                          height: RegisterTheme.illustrationHeight,
+                          fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 40),
                         // Title
@@ -97,7 +103,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: _titleColor,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -105,9 +111,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         // Description
                         Text(
                           _items[index].description,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 16,
-                            color: Colors.grey[600],
+                            color: _descriptionColor,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -119,7 +125,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
             // Page indicator and Next button
             Padding(
-              padding: const EdgeInsets.all(40),
+              padding: const EdgeInsets.fromLTRB(40, 12, 40, 28),
               child: Column(
                 children: [
                   // Page indicator
@@ -134,18 +140,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         width: _currentPage == index ? 24 : 8,
                         decoration: BoxDecoration(
                           color: _currentPage == index
-                              ? Colors.black
-                              : Colors.grey[400],
+                              ? _accentColor
+                              : _accentColor.withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 20),
                   // Next button
                   SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: 72,
                     child: ElevatedButton(
                       onPressed: () {
                         if (_currentPage < _items.length - 1) {
@@ -162,17 +168,20 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF1E1B4B), // Dark blue
+                        foregroundColor: _accentColor,
                         elevation: 0,
+                        shadowColor: Colors.transparent,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide.none,
                         ),
                       ),
                       child: Text(
                         _currentPage == _items.length - 1 ? 'Get Started' : 'Next',
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 20,
                           fontWeight: FontWeight.w600,
+                          color: _accentColor,
                         ),
                       ),
                     ),

@@ -3,6 +3,8 @@ import 'package:diplomka/housing/contact_owner_page.dart';
 import 'package:diplomka/core/home_theme.dart';
 import 'package:diplomka/core/widgets/network_cover_image.dart';
 import 'package:diplomka/housing/models/housing_item.dart';
+import 'package:diplomka/housing/models/housing_photos.dart';
+import 'package:diplomka/housing/widgets/housing_price_label.dart';
 import 'package:diplomka/core/navigation/home_shell.dart';
 import 'package:diplomka/housing/widgets/housing_location_map.dart';
 import 'package:diplomka/core/services/saved_housing_service.dart';
@@ -157,13 +159,25 @@ class _HousingDetailsPageState extends State<HousingDetailsPage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          PageView.builder(
-            controller: _photoController,
-            itemCount: photos.length,
-            onPageChanged: (i) => setState(() => _photoIndex = i),
-            itemBuilder: (_, index) => NetworkCoverImage(
-              url: photos[index],
-              fallbackPath: item.imagePath.startsWith('assets/') ? item.imagePath : null,
+          NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.axis == Axis.horizontal) {
+                return true;
+              }
+              return false;
+            },
+            child: PageView.builder(
+              controller: _photoController,
+              physics: const PageScrollPhysics(),
+              itemCount: photos.length,
+              onPageChanged: (i) => setState(() => _photoIndex = i),
+              itemBuilder: (_, index) => SizedBox.expand(
+                child: NetworkCoverImage(
+                  key: ValueKey('${item.id}-$index-${photos[index]}'),
+                  url: photos[index],
+                  fallbackPath: HousingPhotos.defaultCover,
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -273,14 +287,11 @@ class _HousingDetailsPageState extends State<HousingDetailsPage> {
             ],
           ),
         ),
-        Text(
-          item.price,
-          textAlign: TextAlign.right,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: HomeTheme.accentLight,
-          ),
+        HousingPriceLabel(
+          price: item.price,
+          amountFontSize: 20,
+          periodFontSize: 14,
+          amountFontWeight: FontWeight.w600,
         ),
       ],
     );
@@ -465,7 +476,7 @@ class _HousingDetailsPageState extends State<HousingDetailsPage> {
                           width: 178,
                           child: NetworkCoverImage(
                             url: h.coverPhoto,
-                            fallbackPath: h.imagePath.startsWith('assets/') ? h.imagePath : null,
+                            fallbackPath: HousingPhotos.defaultCover,
                           ),
                         ),
                         Positioned(

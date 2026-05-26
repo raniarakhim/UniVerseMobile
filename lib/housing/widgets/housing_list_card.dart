@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:diplomka/core/home_theme.dart';
 import 'package:diplomka/housing/models/housing_item.dart';
+import 'package:diplomka/housing/widgets/housing_price_label.dart';
 
 class HousingListCard extends StatelessWidget {
   const HousingListCard({
@@ -55,15 +56,7 @@ class HousingListCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(
-                item.price,
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: HomeTheme.accentLight,
-                ),
-              ),
+              HousingPriceLabel(price: item.price),
             ],
           ),
           if (item.amenities.isNotEmpty) ...[

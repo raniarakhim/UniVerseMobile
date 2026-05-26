@@ -10,11 +10,13 @@ class EventRegisteredPage extends StatelessWidget {
     required this.event,
     required this.attendeeName,
     required this.attendeeType,
+    this.attendanceLabel,
   });
 
   final EventItem event;
   final String attendeeName;
   final String attendeeType;
+  final String? attendanceLabel;
 
   static final _upcomingIds = ['pitch-night', 'design-workshop'];
 
@@ -65,6 +67,7 @@ class EventRegisteredPage extends StatelessWidget {
                       event: event,
                       attendeeName: attendeeName,
                       attendeeType: attendeeType,
+                      attendanceLabel: attendanceLabel,
                       showQr: true,
                     ),
                     if (upcoming.isNotEmpty) ...[

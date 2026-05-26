@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:diplomka/core/home_theme.dart';
 import 'package:diplomka/core/models/app_user.dart';
 import 'package:diplomka/core/services/user_profile_service.dart';
+import 'package:diplomka/core/models/picked_local_file.dart';
 import 'package:diplomka/core/services/profile_photo_service.dart';
+import 'package:diplomka/core/services/user_resume_service.dart';
+import 'package:diplomka/core/utils/file_pick_helpers.dart';
+import 'package:diplomka/core/widgets/app_file_upload_area.dart';
 import 'package:diplomka/profile/profile_photo_picker.dart';
 import 'package:diplomka/profile/widgets/profile_avatar.dart';
 import 'package:diplomka/core/widgets/home_detail_app_bar.dart';
@@ -24,10 +28,15 @@ class _BasicInfoPageState extends State<BasicInfoPage> {
   int _yearIndex = 0;
   AppUser? _user;
   String? _photoPath;
+  String? _photoUrl;
+  PickedLocalFile? _resumeFile;
+  String? _savedResumeName;
   bool _loading = true;
   bool _saving = false;
+  bool _uploadingResume = false;
 
   final _profilePhoto = ProfilePhotoService.instance;
+  final _resumeService = UserResumeService.instance;
 
   static const _years = ['1st', '2nd', '3rd', '4th', '5th', '6th+'];
 
@@ -59,11 +68,26 @@ class _BasicInfoPageState extends State<BasicInfoPage> {
       _loading = false;
     });
     await _refreshPhoto();
+    await _loadResumeInfo();
   }
 
   Future<void> _refreshPhoto() async {
-    final path = await _profilePhoto.pathForUser(_user?.uid);
-    if (mounted) setState(() => _photoPath = path);
+    final uid = _user?.uid;
+    final path = await _profilePhoto.pathForUser(uid);
+    final url = await _profilePhoto.urlForUser(uid);
+    if (mounted) {
+      setState(() {
+        _photoPath = path;
+        _photoUrl = url ?? _user?.photoUrl;
+      });
+    }
+  }
+
+  Future<void> _loadResumeInfo() async {
+    final info = await _resumeService.infoForUser(_user?.uid);
+    if (mounted) {
+      setState(() => _savedResumeName = info.fileName);
+    }
   }
 
   Future<void> _changeProfilePhoto() async {
@@ -74,12 +98,46 @@ class _BasicInfoPageState extends State<BasicInfoPage> {
       );
       return;
     }
-    final path = await ProfilePhotoPicker.pickAndSave(
+    await ProfilePhotoPicker.pickAndSave(
       context,
       uid,
-      hasPhoto: _photoPath != null,
+      hasPhoto: _photoPath != null || (_photoUrl != null && _photoUrl!.isNotEmpty),
     );
-    if (mounted) setState(() => _photoPath = path);
+    if (mounted) await _refreshPhoto();
+  }
+
+  Future<void> _pickResume() async {
+    final uid = _user?.uid;
+    if (uid == null) return;
+    try {
+      final picked = await FilePickHelpers.pickPdf(context);
+      if (picked == null || !mounted) return;
+      setState(() {
+        _resumeFile = picked;
+        _uploadingResume = true;
+      });
+      await _resumeService.uploadResume(uid, picked);
+      if (mounted) {
+        setState(() {
+          _savedResumeName = picked.name;
+          _uploadingResume = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('CV uploaded')),
+        );
+      }
+    } on FilePickSizeException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _uploadingResume = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _save() async {
@@ -173,6 +231,33 @@ class _BasicInfoPageState extends State<BasicInfoPage> {
                     ),
                     const SizedBox(height: 8),
                     _yearChips(),
+                    const SizedBox(height: 16),
+                    _sectionHeader('CV / RESUME'),
+                    const SizedBox(height: 8),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'PDF max. 2 MB — used when applying for jobs',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: HomeTheme.placeholder,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    AppFileUploadArea(
+                      file: _resumeFile ??
+                          (_savedResumeName != null
+                              ? PickedLocalFile(
+                                  name: _savedResumeName!,
+                                  path: '',
+                                  sizeBytes: 0,
+                                )
+                              : null),
+                      uploading: _uploadingResume,
+                      onTap: _pickResume,
+                    ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -210,6 +295,7 @@ class _BasicInfoPageState extends State<BasicInfoPage> {
         ProfileAvatar(
           initials: initials,
           photoPath: _photoPath,
+          photoUrl: _photoUrl,
           size: 100,
           backgroundColor: HomeTheme.primary,
           initialsFontSize: 48,

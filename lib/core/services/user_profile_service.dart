@@ -71,7 +71,6 @@ class UserProfileService {
 
   Future<void> logout(BuildContext context) async {
     await AuthService.instance.signOut();
-    clear();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LogoPage()),
@@ -82,7 +81,6 @@ class UserProfileService {
 
   Future<void> deleteAccount(BuildContext context) async {
     await AuthService.instance.deleteAccount();
-    clear();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LogoPage()),

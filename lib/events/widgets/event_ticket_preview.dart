@@ -6,18 +6,23 @@ class EventTicketPreview extends StatelessWidget {
   const EventTicketPreview({
     super.key,
     required this.event,
-    this.attendeeName = 'Aymakhan Balausa',
-    this.attendeeType = 'Student',
+    required this.attendeeName,
+    required this.attendeeType,
+    this.attendanceLabel,
     this.showQr = false,
   });
 
   final EventItem event;
   final String attendeeName;
   final String attendeeType;
+  final String? attendanceLabel;
   final bool showQr;
 
   @override
   Widget build(BuildContext context) {
+    final badgeLabel = attendanceLabel ??
+        '${event.priceLine} · In person';
+
     return LayoutBuilder(
       builder: (context, constraints) {
         return CustomPaint(
@@ -30,6 +35,8 @@ class EventTicketPreview extends StatelessWidget {
                 Text(
                   event.title,
                   textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -38,8 +45,10 @@ class EventTicketPreview extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${event.dateLabel ?? event.dateBadge} · ${event.time ?? ''} · ${event.subtitle}',
+                  '${event.dateLabel ?? event.dateBadge} · ${event.timeLine} · ${event.locationLine}',
                   textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 12,
                     color: HomeTheme.placeholder,
@@ -63,7 +72,9 @@ class EventTicketPreview extends StatelessWidget {
                             style: TextStyle(fontSize: 10, color: HomeTheme.placeholder),
                           ),
                           Text(
-                            attendeeName,
+                            attendeeName.trim().isEmpty ? '—' : attendeeName.trim(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -84,18 +95,22 @@ class EventTicketPreview extends StatelessWidget {
                         child: const Icon(Icons.qr_code_2, color: Colors.white, size: 32),
                       )
                     else
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4C1D95),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Text(
-                          'FREE · In person',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4C1D95),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            badgeLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -109,6 +124,9 @@ class EventTicketPreview extends StatelessWidget {
                           ),
                           Text(
                             attendeeType,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end,
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,

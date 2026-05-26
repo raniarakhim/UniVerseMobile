@@ -9,6 +9,7 @@ class ProfileAvatar extends StatelessWidget {
     super.key,
     required this.initials,
     this.photoPath,
+    this.photoUrl,
     this.size = 65,
     this.backgroundColor = HomeTheme.infoBox,
     this.initialsColor = Colors.white,
@@ -19,6 +20,7 @@ class ProfileAvatar extends StatelessWidget {
 
   final String initials;
   final String? photoPath;
+  final String? photoUrl;
   final double size;
   final Color backgroundColor;
   final Color initialsColor;
@@ -84,12 +86,21 @@ class ProfileAvatar extends StatelessWidget {
   }
 
   DecorationImage? _imageDecoration() {
-    if (photoPath == null || photoPath!.isEmpty) return null;
-    if (kIsWeb) return null;
-    if (!File(photoPath!).existsSync()) return null;
-    return DecorationImage(
-      image: FileImage(File(photoPath!)),
-      fit: BoxFit.cover,
-    );
+    if (!kIsWeb && photoPath != null && photoPath!.isNotEmpty) {
+      if (File(photoPath!).existsSync()) {
+        return DecorationImage(
+          image: FileImage(File(photoPath!)),
+          fit: BoxFit.cover,
+        );
+      }
+    }
+    final url = photoUrl;
+    if (url != null && url.isNotEmpty && url.startsWith('http')) {
+      return DecorationImage(
+        image: NetworkImage(url),
+        fit: BoxFit.cover,
+      );
+    }
+    return null;
   }
 }

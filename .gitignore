@@ -50,6 +50,9 @@ app.*.map.json
 *.keystore
 *.jks
 
+# Firebase Functions
+functions/node_modules/
+
 # Firebase local cache (keep google-services.json if team shares one Firebase project)
 .firebase/
 

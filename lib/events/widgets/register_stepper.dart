@@ -11,7 +11,7 @@ class RegisterStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 52,
+      height: 58,
       child: Stack(
         alignment: Alignment.topCenter,
         children: [
@@ -77,11 +77,14 @@ class RegisterStepper extends StatelessWidget {
                   ),
                 ),
         ),
-        const SizedBox(height: 5),
+        const SizedBox(height: 4),
         Text(
           _labels[index],
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 12,
+            height: 1.1,
             fontWeight: FontWeight.w500,
             color: active
                 ? const Color(0xFF4C1D95)

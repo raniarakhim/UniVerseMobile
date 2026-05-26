@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:diplomka/core/services/firebase_bootstrap.dart';
+import 'package:diplomka/core/services/session_service.dart';
 import 'package:diplomka/core/services/saved_items_registry.dart';
 import 'package:diplomka/register/logo_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseBootstrap.initialize();
+  await SessionService.instance.configureAuthPersistence();
   await SavedItemsRegistry.loadAll();
   runApp(const MyApp());
 }

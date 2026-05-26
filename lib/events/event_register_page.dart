@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:diplomka/core/home_theme.dart';
+import 'package:diplomka/core/models/app_user.dart';
+import 'package:diplomka/core/services/applications_service.dart';
+import 'package:diplomka/core/services/user_profile_service.dart';
+import 'package:diplomka/core/utils/form_validators.dart';
+import 'package:diplomka/core/widgets/app_snackbar.dart';
 import 'package:diplomka/core/widgets/home_detail_app_bar.dart';
 import 'package:diplomka/events/event_registered_page.dart';
 import 'package:diplomka/events/models/event_item.dart';
@@ -18,11 +23,12 @@ class EventRegisterPage extends StatefulWidget {
 
 class _EventRegisterPageState extends State<EventRegisterPage> {
   int _step = 0;
+  bool _submitting = false;
 
-  final _nameCtrl = TextEditingController(text: 'Aymakhan Balausa');
-  final _emailCtrl = TextEditingController(text: 'aymakhanbalausa@gmail.com');
-  final _phoneCtrl = TextEditingController(text: '+7 771 887 33 37');
-  final _facultyCtrl = TextEditingController(text: 'Information Technologies');
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _facultyCtrl = TextEditingController();
   final _linkedinCtrl = TextEditingController();
   final _requirementsCtrl = TextEditingController();
 
@@ -46,7 +52,61 @@ class _EventRegisterPageState extends State<EventRegisterPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _prefillFromProfile(UserProfileService.instance.current);
+    _loadProfile();
+    _nameCtrl.addListener(_onFormChanged);
+    _emailCtrl.addListener(_onFormChanged);
+    _phoneCtrl.addListener(_onFormChanged);
+  }
+
+  void _onFormChanged() {
+    if (mounted && _step == 2) setState(() {});
+  }
+
+  void _prefillFromProfile(AppUser? user) {
+    if (user == null) return;
+    if (_nameCtrl.text.isEmpty) _nameCtrl.text = user.fullName;
+    if (_emailCtrl.text.isEmpty) _emailCtrl.text = user.email;
+    if (_phoneCtrl.text.isEmpty) _phoneCtrl.text = user.phone;
+    if (_facultyCtrl.text.isEmpty && user.faculty.isNotEmpty) {
+      _facultyCtrl.text = user.faculty;
+    }
+    if (user.university.isNotEmpty) _university = user.university;
+    final yearIdx = _years.indexOf(user.yearOfStudy);
+    if (yearIdx >= 0) _yearIndex = yearIdx;
+  }
+
+  Future<void> _loadProfile() async {
+    final user = await UserProfileService.instance.load();
+    if (!mounted || user == null) return;
+    setState(() => _prefillFromProfile(user));
+  }
+
+  String get _attendanceLabel {
+    final price = widget.event.priceLine;
+    return '$price · ${_inPerson ? 'In person' : 'Online'}';
+  }
+
+  String? _validatePersonalInfo() {
+    final checks = [
+      FormValidators.requiredField(_nameCtrl.text, fieldName: 'Имя'),
+      FormValidators.email(_emailCtrl.text),
+      FormValidators.phone(_phoneCtrl.text),
+      FormValidators.requiredField(_facultyCtrl.text, fieldName: 'Факультет'),
+    ];
+    for (final err in checks) {
+      if (err != null) return err;
+    }
+    return null;
+  }
+
+  @override
   void dispose() {
+    _nameCtrl.removeListener(_onFormChanged);
+    _emailCtrl.removeListener(_onFormChanged);
+    _phoneCtrl.removeListener(_onFormChanged);
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
@@ -64,20 +124,87 @@ class _EventRegisterPageState extends State<EventRegisterPage> {
     return 'Intermediate';
   }
 
-  void _next() {
-    if (_step < 2) {
-      setState(() => _step++);
-    } else {
+  Future<void> _next() async {
+    if (_step == 0) {
+      final err = _validatePersonalInfo();
+      if (err != null) {
+        showAppError(context, err);
+        return;
+      }
+      final user = UserProfileService.instance.current;
+      if (user == null) {
+        final loaded = await UserProfileService.instance.load();
+        if (!mounted) return;
+        if (loaded == null) {
+          showAppError(context, 'Войдите в аккаунт, чтобы зарегистрироваться');
+          return;
+        }
+      }
+      setState(() => _step = 1);
+      return;
+    }
+    if (_step == 1) {
+      if (_interests.isEmpty) {
+        showAppError(context, 'Выберите хотя бы один интерес');
+        return;
+      }
+      setState(() => _step = 2);
+      return;
+    }
+    await _confirmRegistration();
+  }
+
+  Future<void> _confirmRegistration() async {
+    final err = _validatePersonalInfo();
+    if (err != null) {
+      showAppError(context, err);
+      setState(() => _step = 0);
+      return;
+    }
+
+    final user = await UserProfileService.instance.load();
+    if (!mounted) return;
+    if (user == null) {
+      showAppError(context, 'Войдите в аккаунт, чтобы зарегистрироваться');
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      await ApplicationsService.instance.submitEventRegistration(
+        eventId: widget.event.id,
+        eventTitle: widget.event.title,
+        formData: {
+          'fullName': _nameCtrl.text.trim(),
+          'email': _emailCtrl.text.trim(),
+          'phone': _phoneCtrl.text.trim(),
+          'university': _university,
+          'faculty': _facultyCtrl.text.trim(),
+          'yearOfStudy': _yearLabel,
+          'linkedin': _linkedinCtrl.text.trim(),
+          'attendance': _inPerson ? 'in_person' : 'online',
+          'role': _roleLabel,
+          'experienceLevel': _levelLabel,
+          'interests': _interests.map((i) => _interestLabels[i]).toList(),
+          'specialRequirements': _requirementsCtrl.text.trim(),
+        },
+      );
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => EventRegisteredPage(
             event: widget.event,
-            attendeeName: _nameCtrl.text,
+            attendeeName: _nameCtrl.text.trim(),
             attendeeType: _roleLabel,
+            attendanceLabel: _attendanceLabel,
           ),
         ),
       );
+    } on ApplicationException catch (e) {
+      if (mounted) showAppError(context, e.message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -131,7 +258,7 @@ class _EventRegisterPageState extends State<EventRegisterPage> {
         width: double.infinity,
         height: 44,
         child: ElevatedButton(
-          onPressed: _next,
+          onPressed: _submitting ? null : _next,
           style: ElevatedButton.styleFrom(
             backgroundColor: HomeTheme.primary,
             foregroundColor: Colors.white,
@@ -174,7 +301,7 @@ class _EventRegisterPageState extends State<EventRegisterPage> {
           child: SizedBox(
             height: 44,
             child: ElevatedButton(
-              onPressed: _next,
+              onPressed: _submitting ? null : _next,
               style: ElevatedButton.styleFrom(
                 backgroundColor: HomeTheme.primary,
                 foregroundColor: Colors.white,
@@ -183,10 +310,16 @@ class _EventRegisterPageState extends State<EventRegisterPage> {
                   borderRadius: BorderRadius.circular(HomeTheme.cardRadius),
                 ),
               ),
-              child: Text(
-                _step == 2 ? 'Confirm registration' : 'Continue to Confirm',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
+              child: _submitting && _step == 2
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(
+                      _step == 2 ? 'Confirm registration' : 'Continue to Confirm',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
             ),
           ),
         ),
@@ -379,8 +512,9 @@ class _EventRegisterPageState extends State<EventRegisterPage> {
         const SizedBox(height: 8),
         EventTicketPreview(
           event: widget.event,
-          attendeeName: _nameCtrl.text,
+          attendeeName: _nameCtrl.text.trim(),
           attendeeType: _roleLabel,
+          attendanceLabel: _attendanceLabel,
         ),
       ],
     );

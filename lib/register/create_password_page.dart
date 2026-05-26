@@ -5,6 +5,7 @@ import 'package:diplomka/register/login_page.dart';
 import 'package:diplomka/register/register_back_button.dart';
 import 'package:diplomka/register/register_error_formatter.dart';
 import 'package:diplomka/register/register_helpers.dart';
+import 'package:diplomka/register/register_theme.dart';
 
 class CreatePasswordPage extends StatefulWidget {
   const CreatePasswordPage({
@@ -27,10 +28,35 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
   final _confirmCtrl = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _passwordNotEmpty = false;
+  bool _confirmNotEmpty = false;
   bool _loading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _passwordCtrl.addListener(_onPasswordChanged);
+    _confirmCtrl.addListener(_onConfirmChanged);
+  }
+
+  void _onPasswordChanged() {
+    final notEmpty = _passwordCtrl.text.isNotEmpty;
+    if (notEmpty != _passwordNotEmpty) {
+      setState(() => _passwordNotEmpty = notEmpty);
+    }
+  }
+
+  void _onConfirmChanged() {
+    final notEmpty = _confirmCtrl.text.isNotEmpty;
+    if (notEmpty != _confirmNotEmpty) {
+      setState(() => _confirmNotEmpty = notEmpty);
+    }
+  }
+
+  @override
   void dispose() {
+    _passwordCtrl.removeListener(_onPasswordChanged);
+    _confirmCtrl.removeListener(_onConfirmChanged);
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
     super.dispose();
@@ -99,17 +125,11 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                 Image.asset(
                   'assets/Register/CreatePassword/group_19.png',
                   width: double.infinity,
-                  height: 200,
+                  height: RegisterTheme.illustrationHeight,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 40),
-                const Text(
-                  'Create New Password',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
+                const Text('Create New Password', style: RegisterTheme.h2),
                 const SizedBox(height: 8),
                 Text(
                   'Create your secure password',
@@ -140,16 +160,14 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                       horizontal: 16,
                       vertical: 16,
                     ),
-                    suffixIcon: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      ),
-                    ),
+                    suffixIcon: _passwordNotEmpty
+                        ? IconButton(
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            ),
+                          )
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -174,19 +192,18 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                       horizontal: 16,
                       vertical: 16,
                     ),
-                    suffixIcon: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
-                      icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                      ),
-                    ),
+                    suffixIcon: _confirmNotEmpty
+                        ? IconButton(
+                            onPressed: () =>
+                                setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                            icon: Icon(
+                              _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                            ),
+                          )
+                        : null,
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -195,6 +212,7 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1E1B4B),
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
                       ),

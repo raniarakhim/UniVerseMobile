@@ -34,6 +34,7 @@ class _HomePageState extends State<HomePage> {
   bool _showBackOnEvents = false;
   AppUser? _user;
   String? _photoPath;
+  String? _photoUrl;
 
   static const _categories = ['All', 'Announcements', 'Events', 'Jobs'];
 
@@ -118,6 +119,19 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _openAnnouncementDetails() {
+    final item = AnnouncementItem.carousel.first;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AnnouncementDetailsPage(
+          key: ValueKey(item.id),
+          item: item,
+        ),
+      ),
+    );
+  }
+
   void _onCategoryChipTap(int index) {
     if (index == 0) {
       setState(() => _categoryIndex = 0);
@@ -128,10 +142,10 @@ class _HomePageState extends State<HomePage> {
         _openAnnouncementsList();
         break;
       case 'Events':
-        HomeShell.openEventsFromHome();
+        _openEventsFromHome();
         break;
       case 'Jobs':
-        HomeShell.openJobsFromHome();
+        _openJobsFromHome();
         break;
     }
   }
@@ -144,8 +158,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadPhoto() async {
-    final path = await ProfilePhotoService.instance.pathForUser(_user?.uid);
-    if (mounted) setState(() => _photoPath = path);
+    final uid = _user?.uid;
+    final path = await ProfilePhotoService.instance.pathForUser(uid);
+    final url = await ProfilePhotoService.instance.urlForUser(uid);
+    if (mounted) {
+      setState(() {
+        _photoPath = path;
+        _photoUrl = url ?? _user?.photoUrl;
+      });
+    }
   }
 
   @override
@@ -197,7 +218,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: HomeTheme.sectionGap),
               _SectionHeader(
                 title: 'Announcements',
-                onSeeAll: _openAnnouncementsList,
+                onSeeAll: _openAnnouncementDetails,
               ),
               const SizedBox(height: HomeTheme.sectionInnerGap),
               _buildAnnouncementsCarousel(),
@@ -206,7 +227,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: HomeTheme.sectionGap),
               _SectionHeader(
                 title: 'Events',
-                onSeeAll: HomeShell.openEventsFromHome,
+                onSeeAll: _openEventsFromHome,
               ),
               const SizedBox(height: HomeTheme.sectionInnerGap),
               _EventsSection(
@@ -222,7 +243,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: HomeTheme.sectionGap),
               _SectionHeader(
                 title: 'Jobs',
-                onSeeAll: HomeShell.openJobsFromHome,
+                onSeeAll: _openJobsFromHome,
               ),
               const SizedBox(height: HomeTheme.sectionInnerGap),
               _JobCard(
@@ -386,6 +407,7 @@ class _HomePageState extends State<HomePage> {
         ProfileAvatar(
           initials: initials.isNotEmpty ? initials : '?',
           photoPath: _photoPath,
+          photoUrl: _photoUrl,
           size: 45,
           backgroundColor: HomeTheme.chipInactive,
           initialsColor: HomeTheme.accent,
@@ -734,20 +756,13 @@ class _EventsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _HorizontalCarousel(
-      height: 196,
-      itemCount: _panels.length,
-      separator: 12,
-      itemBuilder: (context, index) {
-        final event = index == 0 ? EventItem.sample.first : EventItem.byId('design-workshop')!;
-        return GestureDetector(
-        onTap: () => onOpenEvent(event),
-        child: SizedBox(
-          width: HomeTheme.contentWidth,
-          child: _EventPanel(data: _panels[index]),
-        ),
-      );
-      },
+    return SizedBox(
+      height: 204,
+      width: double.infinity,
+      child: GestureDetector(
+        onTap: () => onOpenEvent(EventItem.sample.first),
+        child: _EventPanel(data: _panels.first),
+      ),
     );
   }
 }
@@ -783,7 +798,7 @@ class _EventPanel extends StatelessWidget {
 
   Widget _featuredEventCard(_FeaturedEventData event) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: HomeTheme.surfaceBackground,
         borderRadius: BorderRadius.circular(HomeTheme.cardRadius),
@@ -792,37 +807,31 @@ class _EventPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _EventsSectionDateBadge(text: event.date),
-          const SizedBox(height: 6),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  event.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    height: 1.1,
-                    color: HomeTheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  event.time,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    height: 1.1,
-                    color: HomeTheme.placeholder,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 4),
+          Text(
+            event.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              height: 1.1,
+              color: HomeTheme.primary,
             ),
           ),
+          const SizedBox(height: 2),
+          Text(
+            event.time,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              height: 1.1,
+              color: HomeTheme.placeholder,
+            ),
+          ),
+          const Spacer(),
           _EventsSectionPillTag(text: event.tag),
         ],
       ),
@@ -832,46 +841,38 @@ class _EventPanel extends StatelessWidget {
   Widget _smallEventCard(_CompactEventData event) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: HomeTheme.surfaceBackground,
         borderRadius: BorderRadius.circular(HomeTheme.cardRadius),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _EventsSectionDateBadge(text: event.date, compact: true),
-          const SizedBox(height: 4),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  event.title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    height: 1.1,
-                    color: HomeTheme.primary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  event.subtitle,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    height: 1.1,
-                    color: HomeTheme.placeholder,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          const SizedBox(height: 2),
+          Text(
+            event.title,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              height: 1.1,
+              color: HomeTheme.primary,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            event.subtitle,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              height: 1.1,
+              color: HomeTheme.placeholder,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -898,6 +899,8 @@ class _EventsSectionDateBadge extends StatelessWidget {
       ),
       child: Text(
         text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: compact ? 11 : 12,
           fontWeight: FontWeight.w500,
@@ -917,13 +920,15 @@ class _EventsSectionPillTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: HomeTheme.accentSurface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w500,

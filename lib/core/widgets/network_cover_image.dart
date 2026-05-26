@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:diplomka/core/home_theme.dart';
+import 'package:diplomka/housing/models/housing_photos.dart';
 
 /// Loads remote or asset images with per-item fallback (not the current screen item).
 class NetworkCoverImage extends StatelessWidget {
@@ -20,6 +21,21 @@ class NetworkCoverImage extends StatelessWidget {
       return Image.network(
         url,
         fit: fit,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (_, __, ___) {
+          if (fallbackPath != null &&
+              fallbackPath!.isNotEmpty &&
+              fallbackPath != url &&
+              fallbackPath!.startsWith('http')) {
+            return Image.network(
+              fallbackPath!,
+              fit: fit,
+              filterQuality: FilterQuality.medium,
+              errorBuilder: (_, __, ___) => _placeholder(),
+            );
+          }
+          return _placeholder();
+        },
         loadingBuilder: (_, child, progress) {
           if (progress == null) return child;
           return Container(
@@ -28,32 +44,23 @@ class NetworkCoverImage extends StatelessWidget {
             child: const CircularProgressIndicator(strokeWidth: 2),
           );
         },
-        errorBuilder: (_, __, ___) {
-          if (fallbackPath != null &&
-              fallbackPath!.isNotEmpty &&
-              fallbackPath != url) {
-            if (fallbackPath!.startsWith('assets/')) {
-              return Image.asset(
-                fallbackPath!,
-                fit: fit,
-                errorBuilder: (_, __, ___) => _placeholder(),
-              );
-            }
-            if (fallbackPath!.startsWith('http')) {
-              return Image.network(
-                fallbackPath!,
-                fit: fit,
-                errorBuilder: (_, __, ___) => _placeholder(),
-              );
-            }
-          }
-          return _placeholder();
-        },
       );
     }
     if (url.startsWith('assets/')) {
       return Image.asset(
         url,
+        fit: fit,
+        errorBuilder: (_, __, ___) => _fallbackNetwork(url),
+      );
+    }
+    return _fallbackNetwork(url);
+  }
+
+  Widget _fallbackNetwork(String failedUrl) {
+    final fallback = HousingPhotos.defaultCover;
+    if (failedUrl != fallback) {
+      return Image.network(
+        fallback,
         fit: fit,
         errorBuilder: (_, __, ___) => _placeholder(),
       );

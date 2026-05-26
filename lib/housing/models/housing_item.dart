@@ -49,8 +49,9 @@ class HousingItem {
     final photos = <String>[];
     if (imagePath.isNotEmpty) photos.add(imagePath);
     for (final url in photoUrls) {
-      if (!photos.contains(url)) photos.add(url);
+      if (url.isNotEmpty && !photos.contains(url)) photos.add(url);
     }
+    if (photos.isEmpty) photos.add(HousingPhotos.defaultCover);
     return photos;
   }
 
@@ -144,7 +145,7 @@ class HousingItem {
     title: 'Shared dorm SKSU',
     address: 'Satpayev St, Shymkent',
     price: '₸35,000 /mo',
-    imagePath: HousingPhotos.dormBunksAsset,
+    imagePath: HousingPhotos.dormRoom,
     roomsLabel: 'Shared',
     areaLabel: '12 m²',
     floorLabel: '1st floor',
@@ -191,14 +192,14 @@ class HousingItem {
 
   static const similarYufu = HousingItem(
     id: 'similar-yufu-2room',
-    title: '2-room near YUFU',
+    title: '2-room apartment near YUFU',
     address: 'Tauke Khan Ave, Shymkent',
     price: '₸120,000 /mo',
     imagePath: HousingPhotos.twoRoomLiving,
     roomsLabel: '2 rooms',
     areaLabel: '48 m²',
     floorLabel: '4th floor',
-    amenities: ['2 rooms', 'Wi-Fi', 'Parking'],
+    amenities: ['2 rooms', 'Wi-Fi', 'Parking', 'Mixed'],
     about: 'Bright apartment within walking distance of YUFU campus.',
     mapAddress: 'Tauke Khan Ave 12, Shymkent',
     latitude: 42.3192,
@@ -214,14 +215,14 @@ class HousingItem {
 
   static const similarAbay = HousingItem(
     id: 'similar-abay-shared',
-    title: 'Shared room on Abay',
+    title: 'Cozy room in shared flat',
     address: 'Abay St, Shymkent',
     price: '₸45,000 /mo',
     imagePath: HousingPhotos.sharedBed,
     roomsLabel: 'Shared',
     areaLabel: '14 m²',
     floorLabel: '2nd floor',
-    amenities: ['Shared', 'Wi-Fi', 'Furnished'],
+    amenities: ['1 room', 'Bills included', 'Mixed'],
     about: 'Affordable shared room for students, utilities included.',
     mapAddress: 'Abay St 44, Shymkent',
     latitude: 42.3098,
@@ -230,8 +231,8 @@ class HousingItem {
     ownerRole: 'Agency',
     priceShort: '₸45k/mo',
     photoUrls: [
-      HousingPhotos.dormBunksAsset,
       HousingPhotos.sharedSmall,
+      HousingPhotos.roomSimple,
     ],
   );
 

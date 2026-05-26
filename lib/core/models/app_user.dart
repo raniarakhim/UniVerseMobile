@@ -1,3 +1,5 @@
+import 'package:diplomka/core/utils/phone_utils.dart' show normalizePhone;
+
 class AppUser {
   const AppUser({
     required this.uid,
@@ -8,6 +10,9 @@ class AppUser {
     this.faculty = '',
     this.yearOfStudy = '',
     this.city = 'Shymkent',
+    this.photoUrl = '',
+    this.resumeUrl = '',
+    this.resumeFileName = '',
     this.createdAt,
   });
 
@@ -19,6 +24,9 @@ class AppUser {
   final String faculty;
   final String yearOfStudy;
   final String city;
+  final String photoUrl;
+  final String resumeUrl;
+  final String resumeFileName;
   final DateTime? createdAt;
 
   String get initials {
@@ -44,10 +52,14 @@ class AppUser {
       'fullName': fullName,
       'email': email,
       'phone': phone,
+      'phoneNormalized': normalizePhone(phone),
       'university': university,
       'faculty': faculty,
       'yearOfStudy': yearOfStudy,
       'city': city,
+      if (photoUrl.isNotEmpty) 'photoUrl': photoUrl,
+      if (resumeUrl.isNotEmpty) 'resumeUrl': resumeUrl,
+      if (resumeFileName.isNotEmpty) 'resumeFileName': resumeFileName,
     };
     if (includeCreatedAt) {
       data['createdAt'] = DateTime.now().toUtc().toIso8601String();
@@ -63,6 +75,9 @@ class AppUser {
     String? faculty,
     String? yearOfStudy,
     String? city,
+    String? photoUrl,
+    String? resumeUrl,
+    String? resumeFileName,
   }) {
     return AppUser(
       uid: uid,
@@ -73,6 +88,9 @@ class AppUser {
       faculty: faculty ?? this.faculty,
       yearOfStudy: yearOfStudy ?? this.yearOfStudy,
       city: city ?? this.city,
+      photoUrl: photoUrl ?? this.photoUrl,
+      resumeUrl: resumeUrl ?? this.resumeUrl,
+      resumeFileName: resumeFileName ?? this.resumeFileName,
       createdAt: createdAt,
     );
   }
@@ -88,6 +106,11 @@ class AppUser {
       faculty: data['faculty'] as String? ?? '',
       yearOfStudy: data['yearOfStudy'] as String? ?? '',
       city: data['city'] as String? ?? 'Shymkent',
+      photoUrl: data['photoUrl'] as String? ?? '',
+      resumeUrl: data['resumeLocalPath'] as String? ??
+          data['resumeUrl'] as String? ??
+          '',
+      resumeFileName: data['resumeFileName'] as String? ?? '',
       createdAt: created is String ? DateTime.tryParse(created) : null,
     );
   }

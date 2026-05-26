@@ -27,6 +27,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   AppUser? _user;
   String? _photoPath;
+  String? _photoUrl;
 
   final _savedEvents = SavedEventsService.instance;
   final _profilePhoto = ProfilePhotoService.instance;
@@ -77,7 +78,13 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _refreshPhoto() async {
     final uid = _user?.uid;
     final path = await _profilePhoto.pathForUser(uid);
-    if (mounted) setState(() => _photoPath = path);
+    final url = await _profilePhoto.urlForUser(uid);
+    if (mounted) {
+      setState(() {
+        _photoPath = path;
+        _photoUrl = url ?? _user?.photoUrl;
+      });
+    }
   }
 
   Future<void> _changeProfilePhoto() async {
@@ -88,13 +95,13 @@ class _ProfilePageState extends State<ProfilePage> {
       );
       return;
     }
-    final path = await ProfilePhotoPicker.pickAndSave(
+    await ProfilePhotoPicker.pickAndSave(
       context,
       uid,
-      hasPhoto: _photoPath != null,
+      hasPhoto: _photoPath != null || (_photoUrl != null && _photoUrl!.isNotEmpty),
     );
     if (!mounted) return;
-    setState(() => _photoPath = path);
+    await _refreshPhoto();
   }
 
   Future<void> _openBasicInfo() async {
@@ -248,6 +255,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ProfileAvatar(
                 initials: initials,
                 photoPath: _photoPath,
+                photoUrl: _photoUrl,
                 size: 65,
                 showEditBadge: true,
                 onTap: _changeProfilePhoto,

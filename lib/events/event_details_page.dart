@@ -5,7 +5,6 @@ import 'package:diplomka/core/services/saved_events_service.dart';
 import 'package:diplomka/core/widgets/home_detail_app_bar.dart';
 import 'package:diplomka/events/event_register_page.dart';
 import 'package:diplomka/events/models/event_item.dart';
-import 'package:diplomka/events/event_contact_page.dart';
 
 class EventDetailsPage extends StatefulWidget {
   const EventDetailsPage({super.key, required this.event});
@@ -45,13 +44,6 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
 
   Future<void> _share() async {
     await Share.share(widget.event.shareMessage, subject: widget.event.title);
-  }
-
-  void _openContact() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => EventContactPage(event: widget.event)),
-    );
   }
 
   void _openEvent(EventItem event) {
@@ -123,26 +115,6 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                       icon: Icons.school_outlined,
                       title: event.organizerName,
                       subtitle: 'Official organizer',
-                      onTap: _openContact,
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 44,
-                      child: OutlinedButton(
-                        onPressed: _openContact,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: HomeTheme.primary,
-                          side: const BorderSide(color: HomeTheme.accentLight),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(HomeTheme.cardRadius),
-                          ),
-                        ),
-                        child: const Text(
-                          'Contact',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                        ),
-                      ),
                     ),
                     if (similar.isNotEmpty) ...[
                       const SizedBox(height: 16),
@@ -181,7 +153,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                             icon: Icon(
                               _isSaved ? Icons.favorite : Icons.favorite_border,
                               size: 16,
-                              color: _isSaved ? HomeTheme.accentLight : HomeTheme.primary,
+                              color: HomeTheme.primary,
                             ),
                             label: Text(
                               _isSaved ? 'Saved' : 'Save',
@@ -258,6 +230,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           const SizedBox(height: 12),
           Text(
             event.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w700,
@@ -268,6 +242,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           const SizedBox(height: 12),
           Text(
             event.locationLine,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -319,6 +295,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           const SizedBox(height: 2),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
@@ -364,6 +342,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               children: [
                 Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -372,6 +352,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 ),
                 Text(
                   subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,

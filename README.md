@@ -21,6 +21,8 @@ Release APK:
 flutter build apk --release
 ```
 
+Готовый файл: [releases/UniVerse-release.apk](releases/UniVerse-release.apk)
+
 ## Firebase
 
 См. [FIREBASE_SETUP.md](FIREBASE_SETUP.md). Проект: `diplomkauniverse`, сайт: https://diplomkauniverse.web.app

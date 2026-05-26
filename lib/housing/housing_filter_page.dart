@@ -1,36 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:diplomka/core/home_theme.dart';
-import 'package:diplomka/housing/housing_results_page.dart';
+import 'package:diplomka/housing/models/housing_filter_criteria.dart';
+import 'package:diplomka/core/widgets/donut_slider_thumb_shape.dart';
 import 'package:diplomka/core/widgets/home_detail_app_bar.dart';
 
 class HousingFilterPage extends StatefulWidget {
-  const HousingFilterPage({super.key});
+  const HousingFilterPage({super.key, this.initial});
+
+  final HousingFilterCriteria? initial;
 
   @override
   State<HousingFilterPage> createState() => _HousingFilterPageState();
 }
 
 class _HousingFilterPageState extends State<HousingFilterPage> {
-  final _locationCtrl = TextEditingController(text: 'Shymkent, Kazakhstan');
+  late final TextEditingController _locationCtrl;
 
-  double _priceMin = 100000;
-  double _priceMax = 300000;
-  int _pricePeriod = 1; // 0 hour, 1 month, 2 shift
-  int _roomIndex = 2; // Studio, 1 room, 2-3 rooms
+  late double _priceMin;
+  late double _priceMax;
+  late int _pricePeriod;
+  late int _roomIndex;
 
-  final Map<String, bool> _amenities = {
-    'Wi-Fi': true,
-    'Furnished': false,
-    'Parking': true,
-    'Bills included': false,
-    'Pet friendly': true,
-  };
+  late final Map<String, bool> _amenities;
 
-  int _distanceIndex = 1;
+  late int _distanceIndex;
 
   static const _pricePeriods = ['Per hour', 'Per month', 'Per shift'];
   static const _rooms = ['Studio', '1 room', '2-3 rooms'];
   static const _distances = ['5 min', '10-15 min', '15-30 min', '40 min', 'Any'];
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial ?? HousingFilterCriteria.empty;
+    _locationCtrl = TextEditingController(
+      text: initial.locationQuery.isNotEmpty
+          ? initial.locationQuery
+          : 'Shymkent, Kazakhstan',
+    );
+    _priceMin = initial.priceMin > 0 ? initial.priceMin : 100000;
+    _priceMax = initial.priceMax < 500000 ? initial.priceMax : 300000;
+    _pricePeriod = initial.pricePeriodIndex >= 0 ? initial.pricePeriodIndex : 1;
+    _roomIndex = initial.roomIndex >= 0 ? initial.roomIndex : 2;
+    _distanceIndex = initial.distanceIndex >= 0 ? initial.distanceIndex : 1;
+    _amenities = {
+      'Wi-Fi': initial.requiredAmenities.contains('Wi-Fi'),
+      'Furnished': initial.requiredAmenities.contains('Furnished'),
+      'Parking': initial.requiredAmenities.contains('Parking'),
+      'Bills included': initial.requiredAmenities.contains('Bills included'),
+      'Pet friendly': initial.requiredAmenities.contains('Pet friendly'),
+    };
+    if (initial.requiredAmenities.isEmpty) {
+      _amenities['Wi-Fi'] = true;
+      _amenities['Parking'] = true;
+      _amenities['Pet friendly'] = true;
+    }
+  }
 
   @override
   void dispose() {
@@ -38,13 +63,24 @@ class _HousingFilterPageState extends State<HousingFilterPage> {
     super.dispose();
   }
 
-  Future<void> _onApply() async {
-    final navigator = Navigator.of(context);
-    final showMap = await navigator.push<bool>(
-      MaterialPageRoute(builder: (_) => const HousingResultsPage()),
+  HousingFilterCriteria _buildCriteria() {
+    return HousingFilterCriteria.fromFilterPageState(
+      locationQuery: _locationCtrl.text,
+      priceMin: _priceMin,
+      priceMax: _priceMax,
+      pricePeriodIndex: _pricePeriod,
+      roomIndex: _roomIndex,
+      amenities: _amenities,
+      distanceIndex: _distanceIndex,
     );
-    if (!mounted) return;
-    navigator.pop(showMap ?? true);
+  }
+
+  void _onApply() {
+    Navigator.pop(context, _buildCriteria());
+  }
+
+  void _onReset() {
+    Navigator.pop(context, HousingFilterCriteria.empty);
   }
 
   @override
@@ -78,8 +114,11 @@ class _HousingFilterPageState extends State<HousingFilterPage> {
                       data: SliderTheme.of(context).copyWith(
                         activeTrackColor: HomeTheme.accent,
                         inactiveTrackColor: HomeTheme.chipInactive,
-                        thumbColor: Colors.white,
-                        overlayColor: HomeTheme.accent.withValues(alpha: 0.2),
+                        trackHeight: 4,
+                        overlayShape: SliderComponentShape.noOverlay,
+                        rangeThumbShape: DonutRangeSliderThumbShape(
+                          ringColor: HomeTheme.accent,
+                        ),
                       ),
                       child: RangeSlider(
                         values: RangeValues(_priceMin, _priceMax),
@@ -322,7 +361,7 @@ class _HousingFilterPageState extends State<HousingFilterPage> {
             child: SizedBox(
               height: 44,
               child: OutlinedButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: _onReset,
                 style: OutlinedButton.styleFrom(
                   backgroundColor: HomeTheme.chipInactive,
                   side: BorderSide.none,

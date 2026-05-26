@@ -12,13 +12,60 @@ class PrivacySecurityPage extends StatefulWidget {
 }
 
 class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
-  final _currentCtrl = TextEditingController(text: 'Baluu007');
+  final _currentCtrl = TextEditingController();
   final _newCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
 
   bool _showCurrent = true;
   bool _showNew = false;
   bool _showConfirm = false;
+  bool _saving = false;
+
+  Future<void> _updatePassword() async {
+    final current = _currentCtrl.text;
+    final newPass = _newCtrl.text;
+    final confirm = _confirmCtrl.text;
+
+    if (current.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Введите текущий пароль')),
+      );
+      return;
+    }
+    if (newPass.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Новый пароль — минимум 6 символов')),
+      );
+      return;
+    }
+    if (newPass != confirm) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Пароли не совпадают')),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await AuthService.instance.updatePassword(
+        currentPassword: current,
+        newPassword: newPass,
+      );
+      if (!mounted) return;
+      _currentCtrl.clear();
+      _newCtrl.clear();
+      _confirmCtrl.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Пароль обновлён')),
+      );
+    } on AuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -60,20 +107,16 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                       width: double.infinity,
                       height: 44,
                       child: ElevatedButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Password updated')),
-                          );
-                        },
+                        onPressed: _saving ? null : _updatePassword,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: HomeTheme.primary,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
-                        child: const Text(
-                          'Update password',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        child: Text(
+                          _saving ? 'Saving...' : 'Update password',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                         ),
                       ),
                     ),

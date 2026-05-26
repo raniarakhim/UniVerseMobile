@@ -67,6 +67,8 @@ class EventFeaturedCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               event.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
@@ -76,6 +78,8 @@ class EventFeaturedCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               event.subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -93,6 +97,8 @@ class EventFeaturedCard extends StatelessWidget {
                 ),
                 Text(
                   event.time ?? event.priceLabel ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
@@ -143,7 +149,7 @@ class EventCompactCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 4,
@@ -169,30 +175,34 @@ class EventCompactCard extends StatelessWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           event.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w500,
+                            height: 1.1,
                             color: HomeTheme.primary,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           event.subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
+                            height: 1.1,
                             color: HomeTheme.placeholder,
                           ),
                         ),
                         if (event.tags.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 6,
-                            children: event.tags.map(_chip).toList(),
-                          ),
+                          const SizedBox(height: 2),
+                          _chip(event.tags.first),
                         ],
                       ],
                     ),
@@ -204,7 +214,7 @@ class EventCompactCard extends StatelessWidget {
                     icon: Icon(
                       event.isFavorite ? Icons.favorite : Icons.favorite_border,
                       size: 16,
-                      color: HomeTheme.accent,
+                      color: HomeTheme.primary,
                     ),
                   ),
                 ],

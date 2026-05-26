@@ -1,8 +1,15 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:diplomka/job/application_sent_page.dart';
 import 'package:diplomka/core/home_theme.dart';
+import 'package:diplomka/core/models/picked_local_file.dart';
+import 'package:diplomka/core/services/applications_service.dart';
+import 'package:diplomka/core/services/storage_upload_service.dart';
+import 'package:diplomka/core/services/user_profile_service.dart';
+import 'package:diplomka/core/services/user_resume_service.dart';
+import 'package:diplomka/core/utils/file_pick_helpers.dart';
+import 'package:diplomka/core/utils/form_validators.dart';
+import 'package:diplomka/core/widgets/app_file_upload_area.dart';
+import 'package:diplomka/core/widgets/app_snackbar.dart';
 import 'package:diplomka/job/models/job_item.dart';
 import 'package:diplomka/core/widgets/home_detail_app_bar.dart';
 import 'package:diplomka/core/widgets/home_form_field.dart';
@@ -26,8 +33,12 @@ class _ApplyForJobPageState extends State<ApplyForJobPage> {
   late final TextEditingController _portfolioCtrl;
 
   int _selectedStart = 0;
-  String? _cvFileName;
-  final _imagePicker = ImagePicker();
+  PickedLocalFile? _cvFile;
+  String? _profileResumePath;
+  String? _profileResumeName;
+  bool _useProfileResume = false;
+  bool _submitting = false;
+  bool _uploadingCv = false;
 
   @override
   void initState() {
@@ -37,7 +48,51 @@ class _ApplyForJobPageState extends State<ApplyForJobPage> {
     _phoneCtrl = TextEditingController();
     _coverCtrl = TextEditingController();
     _portfolioCtrl = TextEditingController();
+    _loadProfile();
   }
+
+  Future<void> _loadProfile() async {
+    final user = await UserProfileService.instance.load();
+    if (!mounted) return;
+    if (user != null) {
+      setState(() {
+        if (_nameCtrl.text.isEmpty) _nameCtrl.text = user.fullName;
+        if (_emailCtrl.text.isEmpty) _emailCtrl.text = user.email;
+        if (_phoneCtrl.text.isEmpty) _phoneCtrl.text = user.phone;
+        _profileResumePath = user.resumeUrl.isNotEmpty ? user.resumeUrl : null;
+        _profileResumeName =
+            user.resumeFileName.isNotEmpty ? user.resumeFileName : null;
+      });
+    }
+    if (_profileResumePath == null && user != null) {
+      final info = await UserResumeService.instance.infoForUser(user.uid);
+      if (mounted) {
+        setState(() {
+          _profileResumePath = info.localPath;
+          _profileResumeName = info.fileName;
+        });
+      }
+    }
+  }
+
+  String? _validateForm() {
+    final checks = [
+      FormValidators.requiredField(_nameCtrl.text, fieldName: 'Имя'),
+      FormValidators.email(_emailCtrl.text),
+      FormValidators.phone(_phoneCtrl.text),
+      FormValidators.requiredField(_coverCtrl.text, fieldName: 'Сопроводительное письмо'),
+    ];
+    for (final err in checks) {
+      if (err != null) return err;
+    }
+    if (!_hasCv) {
+      return 'Загрузите CV (PDF)';
+    }
+    return null;
+  }
+
+  bool get _hasCv =>
+      _cvFile != null || (_useProfileResume && _profileResumePath != null);
 
   @override
   void dispose() {
@@ -92,9 +147,9 @@ class _ApplyForJobPageState extends State<ApplyForJobPage> {
                         color: Color(0xFF0F0E2A),
                       ),
                     ),
-                    const SizedBox(height: 0),
+                    const SizedBox(height: 4),
                     const Text(
-                      'We support only PDF max. 2mb',
+                      'PDF only, max. 2 MB',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -102,7 +157,38 @@ class _ApplyForJobPageState extends State<ApplyForJobPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _uploadArea(),
+                    AppFileUploadArea(
+                      file: _cvFile ??
+                          (_useProfileResume && _profileResumeName != null
+                              ? PickedLocalFile(
+                                  name: _profileResumeName!,
+                                  path: '',
+                                  sizeBytes: 0,
+                                )
+                              : null),
+                      uploading: _uploadingCv,
+                      onTap: _pickCv,
+                    ),
+                    if (_profileResumePath != null) ...[
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _useProfileResume = true;
+                            _cvFile = null;
+                          });
+                        },
+                        icon: Icon(
+                          _useProfileResume ? Icons.check_circle : Icons.description_outlined,
+                          size: 20,
+                          color: HomeTheme.accent,
+                        ),
+                        label: Text(
+                          'Use CV from profile${_profileResumeName != null ? ': $_profileResumeName' : ''}',
+                          style: const TextStyle(fontSize: 14, color: HomeTheme.accent),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     const Text(
                       'When can you start?',
@@ -125,7 +211,7 @@ class _ApplyForJobPageState extends State<ApplyForJobPage> {
                       width: double.infinity,
                       height: 44,
                       child: ElevatedButton(
-                        onPressed: _submit,
+                        onPressed: _submitting ? null : _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: HomeTheme.primary,
                           foregroundColor: Colors.white,
@@ -134,10 +220,19 @@ class _ApplyForJobPageState extends State<ApplyForJobPage> {
                             borderRadius: BorderRadius.circular(HomeTheme.cardRadius),
                           ),
                         ),
-                        child: const Text(
-                          'Submit Application',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                        ),
+                        child: _submitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Submit Application',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                              ),
                       ),
                     ),
                   ],
@@ -167,9 +262,9 @@ class _ApplyForJobPageState extends State<ApplyForJobPage> {
               borderRadius: BorderRadius.circular(12),
             ),
             alignment: Alignment.center,
-            child: const Text(
-              'K',
-              style: TextStyle(
+            child: Text(
+              widget.job.logoLetter,
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 22,
@@ -206,89 +301,16 @@ class _ApplyForJobPageState extends State<ApplyForJobPage> {
   }
 
   Future<void> _pickCv() async {
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from gallery'),
-              onTap: () => Navigator.pop(ctx, 'gallery'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.picture_as_pdf_outlined),
-              title: const Text('Choose PDF file'),
-              onTap: () => Navigator.pop(ctx, 'pdf'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (!mounted || choice == null) return;
-
-    if (choice == 'gallery') {
-      final image = await _imagePicker.pickImage(source: ImageSource.gallery);
-      if (image != null && mounted) {
-        setState(() => _cvFileName = image.name);
-      }
-      return;
+    try {
+      final picked = await FilePickHelpers.pickPdf(context);
+      if (picked == null || !mounted) return;
+      setState(() {
+        _cvFile = picked;
+        _useProfileResume = false;
+      });
+    } on FilePickSizeException catch (e) {
+      if (mounted) showAppError(context, e.message);
     }
-
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['pdf'],
-    );
-    if (result != null && result.files.isNotEmpty && mounted) {
-      setState(() => _cvFileName = result.files.single.name);
-    }
-  }
-
-  Widget _uploadArea() {
-    final hasFile = _cvFileName != null;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _pickCv,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: double.infinity,
-          height: 102,
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: hasFile ? HomeTheme.accentLight : HomeTheme.accentSurface,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                hasFile ? Icons.check_circle_outline : Icons.upload_file,
-                size: 30,
-                color: hasFile ? HomeTheme.accentLight : HomeTheme.primary,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                hasFile ? _cvFileName! : 'Upload',
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: hasFile ? HomeTheme.accentLight : HomeTheme.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _startChips() {
@@ -320,12 +342,74 @@ class _ApplyForJobPageState extends State<ApplyForJobPage> {
     );
   }
 
-  void _submit() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ApplicationSentPage(companyName: widget.job.company),
-      ),
-    );
+  Future<void> _submit() async {
+    final err = _validateForm();
+    if (err != null) {
+      showAppError(context, err);
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      final uid = UserProfileService.instance.current?.uid;
+      if (uid == null || uid.isEmpty) {
+        throw ApplicationException('Войдите в аккаунт');
+      }
+
+      String? cvLocalPath;
+      String cvFileName;
+
+      if (_cvFile != null) {
+        setState(() => _uploadingCv = true);
+        final ts = DateTime.now().millisecondsSinceEpoch;
+        cvLocalPath = await StorageUploadService.instance.uploadFile(
+          storagePath: 'users/$uid/applications/${widget.job.saveId}_$ts.pdf',
+          file: _cvFile!,
+          contentType: 'application/pdf',
+          maxBytes: UserResumeService.maxBytes,
+        );
+        cvFileName = _cvFile!.name;
+        if (mounted) setState(() => _uploadingCv = false);
+      } else {
+        cvLocalPath = _profileResumePath;
+        cvFileName = _profileResumeName ?? 'resume.pdf';
+      }
+
+      await ApplicationsService.instance.submitJobApplication(
+        jobId: widget.job.saveId,
+        jobTitle: widget.job.title,
+        company: widget.job.company,
+        formData: {
+          'fullName': _nameCtrl.text.trim(),
+          'email': _emailCtrl.text.trim(),
+          'phone': _phoneCtrl.text.trim(),
+          'coverLetter': _coverCtrl.text.trim(),
+          'cvFileName': cvFileName,
+          'cvLocalPath': cvLocalPath,
+          'startAvailability': _startOptions[_selectedStart],
+          'portfolio': _portfolioCtrl.text.trim(),
+        },
+      );
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ApplicationSentPage(companyName: widget.job.company),
+        ),
+      );
+    } on ApplicationException catch (e) {
+      if (mounted) showAppError(context, e.message);
+    } on StorageUploadException catch (e) {
+      if (mounted) showAppError(context, e.message);
+    } catch (e) {
+      if (mounted) showAppError(context, 'Ошибка: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+          _uploadingCv = false;
+        });
+      }
+    }
   }
 }

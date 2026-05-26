@@ -1,48 +1,50 @@
-/// Фото интерьеров жилья (Unsplash): квартиры, комнаты, общежития.
+/// Фото интерьеров жилья (Unsplash) — у каждого объявления свой URL.
 abstract final class HousingPhotos {
   static const _q = 'auto=format&fit=crop&w=800&h=500&q=80';
 
-  // Студия / однокомнатная
+  /// Запасное фото, если загрузка не удалась.
+  static const defaultCover =
+      'https://images.unsplash.com/photo-1502672260266-1c1ef2cd9361?$_q';
+
+  // Студия
   static const studioLiving =
       'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?$_q';
   static const studioSofa =
-      'https://images.unsplash.com/photo-1502672260266-1c1ef2cd9361?$_q';
-  static const studioCozy =
       'https://images.unsplash.com/photo-1554995207-c18c203602cb?$_q';
-  static const studioModern =
+  static const studioCozy =
       'https://images.unsplash.com/photo-1484154218962-a197022b5858?$_q';
+  static const studioModern =
+      'https://images.unsplash.com/photo-1560448075-cbc4a93cd7e0?$_q';
 
   // Комната
   static const roomBed =
-      'https://images.unsplash.com/photo-1560448075-cbc4a93cd7e0?$_q';
+      'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?$_q';
   static const roomBright =
       'https://images.unsplash.com/photo-1598928506311-c55ded939a1c?$_q';
   static const roomSimple =
       'https://images.unsplash.com/photo-1560185127-6ed189bf04f6?$_q';
   static const roomDesk =
-      'https://images.unsplash.com/photo-1522771739844-f6f6d9c457da?$_q';
+      'https://images.unsplash.com/photo-1513694203232-719a280e022f?$_q';
 
-  // Двухкомнатная квартира
+  // Квартира
   static const aptLiving =
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?$_q';
   static const aptWide =
       'https://images.unsplash.com/photo-1600210492486-724fe994c013?$_q';
   static const aptKitchen =
-      'https://images.unsplash.com/photo-1493809842364-78817add7ffb?$_q';
+      'https://images.unsplash.com/photo-1556912173-46c336c3fd55?$_q';
   static const aptDining =
       'https://images.unsplash.com/photo-1600047509807-ba8f99d2cd7a?$_q';
 
   // Общежитие
-  static const dormBunksAsset =
-      'assets/Home/Housing Details/9c00d7c6c039722b1b5e33e58901a045b1ab8015.png';
   static const dormRoom =
       'https://images.unsplash.com/photo-1555854877-bab0ef45d366?$_q';
   static const dormBeds =
       'https://images.unsplash.com/photo-1595526114035-0d3ed99242d7?$_q';
   static const dormHall =
-      'https://images.unsplash.com/photo-1522771739844-f6f6d9c457da?$_q';
+      'https://images.unsplash.com/photo-1524758631624-e2822e304c36?$_q';
 
-  // Лофт / современная квартира (только интерьеры)
+  // Лофт
   static const loftLiving =
       'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?$_q';
   static const loftKitchen =
@@ -58,9 +60,9 @@ abstract final class HousingPhotos {
   static const twoRoomBed =
       'https://images.unsplash.com/photo-1616135824236-bab0e834b118?$_q';
   static const twoRoomView =
-      'https://images.unsplash.com/photo-1600210492486-724fe994c013?$_q';
+      'https://images.unsplash.com/photo-1484101403633-562891f886b2?$_q';
 
-  // Комната в shared
+  // Shared
   static const sharedBed =
       'https://images.unsplash.com/photo-1631889992176-680e893c27c0?$_q';
   static const sharedSmall =

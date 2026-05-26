@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:diplomka/core/home_theme.dart';
+import 'package:diplomka/core/widgets/home_nav_icon.dart';
 
 class HomeBottomNav extends StatelessWidget {
   const HomeBottomNav({
@@ -12,11 +13,11 @@ class HomeBottomNav extends StatelessWidget {
   final ValueChanged<int> onTap;
 
   static const _items = [
-    (icon: Icons.home_rounded, label: 'Home'),
-    (icon: Icons.work_outline_rounded, label: 'Jobs'),
-    (icon: Icons.apartment_rounded, label: 'Housing'),
-    (icon: Icons.calendar_today_rounded, label: 'Events'),
-    (icon: Icons.person_outline_rounded, label: 'Profile'),
+    (label: 'Home'),
+    (label: 'Jobs'),
+    (label: 'Housing'),
+    (label: 'Events'),
+    (label: 'Profile'),
   ];
 
   @override
@@ -61,7 +62,7 @@ class HomeBottomNav extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(item.icon, size: 25, color: HomeTheme.accent),
+                              HomeNavIcon(index: index),
                               AnimatedSize(
                                 duration: const Duration(milliseconds: 280),
                                 curve: Curves.easeOutCubic,

@@ -2,11 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:diplomka/core/services/auth_service.dart';
+import 'package:diplomka/core/services/password_reset_service.dart';
+import 'package:diplomka/register/models/password_reset_flow.dart';
 import 'package:diplomka/register/register_back_button.dart';
+import 'package:diplomka/register/register_helpers.dart';
+import 'package:diplomka/register/register_theme.dart';
 import 'package:diplomka/register/reset_password_page.dart';
 
 class VerificationCodePage extends StatefulWidget {
-  const VerificationCodePage({super.key});
+  const VerificationCodePage({super.key, required this.flow});
+
+  final PasswordResetFlowArgs flow;
 
   @override
   State<VerificationCodePage> createState() => _VerificationCodePageState();
@@ -17,13 +24,18 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
   static const Color _background = Color(0xFFF7F7F9);
   static const Color _secondary = Color(0xFF7D848D);
   static const Color _boxFill = Color(0xFFE5E9EF);
+  static const _codeLength = 6;
 
   final List<TextEditingController> _controllers =
-      List.generate(4, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
+      List.generate(_codeLength, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(_codeLength, (_) => FocusNode());
 
   Timer? _timer;
   int _secondsLeft = 80;
+  bool _verifying = false;
+  bool _resending = false;
+
+  PasswordResetFlowArgs get _flow => widget.flow;
 
   @override
   void initState() {
@@ -50,15 +62,99 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
     return '$minutes:${seconds.toString().padLeft(2, '0')} min left';
   }
 
+  String get _subtitle {
+    if (_flow.channel == PasswordResetChannel.email) {
+      return '6-значный код отправлен на ${_flow.maskedDestination}';
+    }
+    return '6-значный код из SMS отправлен на ${_flow.maskedDestination}';
+  }
+
+  String get _code => _controllers.map((c) => c.text).join();
+
   void _onDigitChanged(int index, String value) {
     if (value.length > 1) {
       _controllers[index].text = value[value.length - 1];
       _controllers[index].selection = const TextSelection.collapsed(offset: 1);
     }
-    if (value.isNotEmpty && index < 3) {
+    if (value.isNotEmpty && index < _codeLength - 1) {
       _focusNodes[index + 1].requestFocus();
     } else if (value.isEmpty && index > 0) {
       _focusNodes[index - 1].requestFocus();
+    }
+  }
+
+  Future<void> _verify() async {
+    if (_code.length != _codeLength) {
+      showRegisterError(context, 'Введите $_codeLength цифр');
+      return;
+    }
+
+    setState(() => _verifying = true);
+    try {
+      if (_flow.channel == PasswordResetChannel.email) {
+        final sessionId = _flow.sessionId;
+        if (sessionId == null) throw AuthException('Нет сессии');
+        final resetToken = await PasswordResetService.instance.verifyEmailOtp(
+          sessionId: sessionId,
+          code: _code,
+        );
+        if (!mounted) return;
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResetPasswordPage(
+              channel: PasswordResetChannel.email,
+              sessionId: sessionId,
+              resetToken: resetToken,
+            ),
+          ),
+        );
+      } else {
+        final e164 = _flow.e164;
+        final normalized = _flow.normalizedPhone;
+        if (e164 == null || normalized == null) throw AuthException('Нет номера');
+        await PasswordResetService.instance.verifyPhoneSmsAndSignIn(
+          smsCode: _code,
+          e164: e164,
+        );
+        if (!mounted) return;
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResetPasswordPage(
+              channel: PasswordResetChannel.phone,
+              normalizedPhone: normalized,
+            ),
+          ),
+        );
+      }
+    } on AuthException catch (e) {
+      if (mounted) showRegisterError(context, e.message);
+    } finally {
+      if (mounted) setState(() => _verifying = false);
+    }
+  }
+
+  Future<void> _resend() async {
+    if (_secondsLeft > 0) return;
+    setState(() => _resending = true);
+    try {
+      if (_flow.channel == PasswordResetChannel.email) {
+        final result = await PasswordResetService.instance.requestEmailOtp(_flow.target);
+        if (mounted) {
+          showRegisterSuccess(context, 'Новый код отправлен на ${result.maskedDestination}');
+        }
+      } else {
+        final e164 = _flow.e164;
+        if (e164 == null) throw AuthException('Нет номера');
+        await PasswordResetService.instance.sendPhoneSmsCode(e164);
+        if (mounted) showRegisterSuccess(context, 'SMS отправлено повторно');
+      }
+      _startTimer();
+    } on AuthException catch (e) {
+      if (mounted) showRegisterError(context, e.message);
+    } finally {
+      if (mounted) setState(() => _resending = false);
     }
   }
 
@@ -98,130 +194,136 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
                 Image.asset(
                   'assets/Register/VerificationCode/Group 19.png',
                   width: double.infinity,
-                  height: 220,
+                  height: RegisterTheme.illustrationHeight,
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 32),
                 const Text(
                   'Verification code',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1B1E28),
-                  ),
+                  style: RegisterTheme.h2,
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'A 4 digit code has been sent to +91 701*****34',
+                Text(
+                  _subtitle,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 15,
                     height: 1.4,
                     color: _secondary,
                   ),
                 ),
+                if (_flow.devMode) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Режим разработки: смотрите код в логах Functions',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                  ),
+                ],
                 const SizedBox(height: 32),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    for (var index = 0; index < 4; index++) ...[
-                      if (index > 0) const SizedBox(width: 12),
+                    for (var index = 0; index < _codeLength; index++) ...[
+                      if (index > 0) const SizedBox(width: 8),
                       SizedBox(
-                      width: 72,
-                      height: 64,
-                      child: TextField(
-                        controller: _controllers[index],
-                        focusNode: _focusNodes[index],
-                        textAlign: TextAlign.center,
-                        keyboardType: TextInputType.number,
-                        maxLength: 1,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1B1E28),
+                        width: 46,
+                        height: 56,
+                        child: TextField(
+                          controller: _controllers[index],
+                          focusNode: _focusNodes[index],
+                          textAlign: TextAlign.center,
+                          keyboardType: TextInputType.number,
+                          maxLength: 1,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1B1E28),
+                          ),
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          decoration: InputDecoration(
+                            counterText: '',
+                            filled: true,
+                            fillColor: _boxFill,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: _primary, width: 1.5),
+                            ),
+                          ),
+                          onChanged: (value) => _onDigitChanged(index, value),
                         ),
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        decoration: InputDecoration(
-                          counterText: '',
-                          filled: true,
-                          fillColor: _boxFill,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: _primary, width: 1.5),
-                          ),
-                        ),
-                        onChanged: (value) => _onDigitChanged(index, value),
                       ),
-                    ),
                     ],
                   ],
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const ResetPasswordPage()),
-                      );
-                    },
+                    onPressed: _verifying ? null : _verify,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
                       ),
                     ),
-                    child: const Text(
-                      'Verify',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
+                    child: _verifying
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text(
+                            'Verify',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: _secondsLeft == 0 ? _startTimer : null,
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton(
+                        onPressed: (_secondsLeft == 0 && !_resending) ? _resend : null,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          _resending ? 'Sending…' : 'Resend Code',
+                          style: TextStyle(
+                            color: _secondsLeft == 0 ? _primary : _secondary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                      child: Text(
-                        'Resend Code',
-                        style: TextStyle(
-                          color: _secondsLeft == 0 ? _primary : _secondary,
+                      Text(
+                        _timerLabel,
+                        style: const TextStyle(
+                          color: _secondary,
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ),
-                    Text(
-                      _timerLabel,
-                      style: const TextStyle(
-                        color: _secondary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
               ],

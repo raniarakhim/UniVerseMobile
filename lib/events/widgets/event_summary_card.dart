@@ -16,17 +16,17 @@ class EventSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Container(
-          width: 4,
-          height: 87,
-          decoration: const BoxDecoration(
-            color: Color(0xFF4C1D95),
-            borderRadius: BorderRadius.all(Radius.circular(2)),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: 4,
+            decoration: const BoxDecoration(
+              color: Color(0xFF4C1D95),
+              borderRadius: BorderRadius.all(Radius.circular(2)),
+            ),
           ),
-        ),
         const SizedBox(width: 4),
         Expanded(
           child: Container(
@@ -46,26 +46,30 @@ class EventSummaryCard extends StatelessWidget {
                     color: HomeTheme.accentSurface,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        event.month,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF4C1D95),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          event.month,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF4C1D95),
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${event.day}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: HomeTheme.primary,
+                        Text(
+                          '${event.day}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: HomeTheme.primary,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -75,6 +79,8 @@ class EventSummaryCard extends StatelessWidget {
                     children: [
                       Text(
                         event.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w500,
@@ -132,14 +138,15 @@ class EventSummaryCard extends StatelessWidget {
                     icon: Icon(
                       isFavorite ? Icons.favorite : Icons.favorite_border,
                       size: 16,
-                      color: HomeTheme.accent,
+                      color: HomeTheme.primary,
                     ),
                   ),
               ],
             ),
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 }
